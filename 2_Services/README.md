@@ -50,6 +50,6 @@ kubectl apply -f webapp-service.yaml
 
 3. Once the pod is running, we simply update the selector of the service to `release: 0.5` and the service immediately reroutes traffic to the updated pod without any downtime.
 
-> This is just an example. A common pattern to upgrade a pod without downtime will be covered later in the course.
+> This is just an example. We'll later study `Deployments` which offer a more elegant means to handle rollouts
 
 

@@ -22,6 +22,8 @@ The pod will not be recreated.
 
 - Every microservice pod should be part of a replica set.
 
+- A `ReplicaSet` is referenced from the `Service`, instead of a `Pod`.
+
 ## Defining a ReplicaSet
 
 ReplicaSets and Pods are defined in the same file. The Pod specification is nested in the ReplicaSet specification
