@@ -111,3 +111,115 @@ Password: tcuser
 ```
 
 Once done, you should be able to navigate to /mnt/mydata/mydb
+
+## 8.4 PersistentVolumeClaims
+
+- In the previous example, we defined a storage volume specific to one pod.
+- But what if we wanted to share a storage volume between multiple pods?
+- **PersistentVolumeClaims** is a pointer to a storage volume implementation. This pointer is referenced by a pod.
+- We replace the `hostPath` definition earlier with a `persistentVolumeClaim` pointer as follows:
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  replicas: 1
+  template: # template for the pods
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:3.6.5-jessie 
+        volumeMounts:
+          - name: mongo-persistent-storage
+            mountPath: /data/db
+      volumes:
+        - name: mongo-persistent-storage
+          persistentVolumeClaim: 
+            claimName: mongo-pvc
+```
+
+- The claim name references a **`PersistentVolumeClaim`** definition which is ideally in a seperate file.
+- The file defines two resources: **`PersistentVolumeClaim`** which defines the kind of storage we want and **`PersistentVolume`** which defines how we want the storage to be implemented.
+- The `claimName` should match the `metadata.name` in the `PersistentVolumeClaim` definition.
+
+
+- Both **`PersistentVolumeClaim`** and **`PersistentVolume`** require an `accessModes` definition, usually `ReadWriteOnce`
+- Both **`PersistentVolumeClaim`** and **`PersistentVolume`** must also specify `capacity`. The capacity of the **`PersistentVolume`** must be equal to or greater than the storage requested in the **`PersistentVolumeClaim`**.
+- Both **`PersistentVolumeClaim`** and **`PersistentVolume`** must have a `storageClassName`. `StorageClassName` allows a system administrator to define classes of storage e.g. Hard Disk, SSD, cloud etc. 
+In order for a `PersistentVolume` to be mapped to a `PersistentVolumeClaim`, they must have the same `storageClassName`, the same `accessMode` and the `capacity` of the `persistentVolume` must be greater than or equal to the one requested by the `persistentVolumeClaim`.
+
+### 8.4.1 Deploying a PersistentVolumeClaim
+
+- `PersistentVolumes` will not appear when you run the command `kubectl get all`. This is because `PersistentVolume`s are resources.
+
+- To view the `PersistentVolumeClaim`, use the command `kubectl get pv`
+
+
+```
+$ kubectl get pv
+NAME            CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS    CLAIM               STORAGECLASS          REASON    AGE
+local-storage   20Gi       RWO            Retain           Bound     default/mongo-pvc   local-storage-class             5m
+```
+
+```
+$ kubectl get pvc
+NAME        STATUS    VOLUME          CAPACITY   ACCESS MODES   STORAGECLASS          AGE
+mongo-pvc   Bound     local-storage   20Gi       RWO            local-storage-class   3m
+```
+
+We can also see the persistentVolumeClaim when we describe the pod:
+
+```
+$ kubectl describe pod/mongodb-747b7bfcc9-rtvn5
+Name:               mongodb-747b7bfcc9-rtvn5
+Namespace:          default
+Priority:           0
+PriorityClassName:  <none>
+Node:               minikube/10.0.2.15
+Start Time:         Fri, 25 Jan 2019 17:02:05 +0400
+Labels:             app=mongodb
+                    pod-template-hash=747b7bfcc9
+Annotations:        <none>
+Status:             Running
+IP:                 172.17.0.11
+Controlled By:      ReplicaSet/mongodb-747b7bfcc9
+Containers:
+  mongodb:
+    Container ID:   docker://bc4b708a38b148811ad5c38390e711bfc04684da1f968120273bcc92aaf0eb1a
+    Image:          mongo:3.6.5-jessie
+    Image ID:       docker-pullable://mongo@sha256:3e00936a4fbd17003cfd33ca808f03ada736134774bfbc3069d3757905a4a326
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Fri, 25 Jan 2019 17:02:06 +0400
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /data/db from mongo-persistent-storage (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-445gl (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  mongo-persistent-storage:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  mongo-pvc
+    ReadOnly:   false
+  default-token-445gl:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-445gl
+    Optional:    false
+QoS Class:       BestEffort
+```

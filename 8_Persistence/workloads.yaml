@@ -38,9 +38,8 @@ spec:
             mountPath: /data/db
       volumes:
         - name: mongo-persistent-storage
-          hostPath:
-            path: /mnt/mydata/mydb #path in Linux version machine
-            type: DirectoryOrCreate
+          persistentVolumeClaim: 
+            claimName: mongo-pvc
 
 ---
 apiVersion: apps/v1
